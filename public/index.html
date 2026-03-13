@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Haiku Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f8f4;
+      --surface: #ffffff;
+      --text-primary: #1a1a18;
+      --text-secondary: #6b6a64;
+      --text-tertiary: #a8a79f;
+      --border: rgba(26, 26, 24, 0.12);
+      --border-hover: rgba(26, 26, 24, 0.25);
+      --accent-glow: rgba(127, 119, 221, 0.12);
+      --radius-md: 8px;
+      --radius-lg: 14px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141412;
+        --surface: #1e1e1b;
+        --text-primary: #f0efe8;
+        --text-secondary: #9a9890;
+        --text-tertiary: #5a5955;
+        --border: rgba(240, 239, 232, 0.1);
+        --border-hover: rgba(240, 239, 232, 0.22);
+        --accent-glow: rgba(127, 119, 221, 0.15);
+      }
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: 'DM Mono', monospace;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 580px;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Header */
+    .header { text-align: center; }
+
+    .eyebrow {
+      font-size: 10px;
+      font-weight: 300;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-bottom: 0.6rem;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 400;
+      font-style: italic;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .tagline {
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--text-secondary);
+      letter-spacing: 0.03em;
+    }
+
+    /* Input row */
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .topic-input {
+      flex: 1;
+      padding: 13px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      font-weight: 300;
+      background: var(--surface);
+      border: 0.5px solid var(--border-hover);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .topic-input::placeholder { color: var(--text-tertiary); }
+
+    .topic-input:focus {
+      border-color: rgba(127, 119, 221, 0.5);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .gen-btn {
+      padding: 13px 22px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--text-primary);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .gen-btn:hover { opacity: 0.82; }
+    .gen-btn:active { transform: scale(0.97); }
+    .gen-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    /* Haiku card */
+    .haiku-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 3rem 2rem;
+      min-height: 210px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: opacity 0.3s;
+    }
+
+    .haiku-card.loading { opacity: 0.45; }
+
+    .empty-state {
+      font-size: 13px;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      color: var(--text-tertiary);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 1.5px solid var(--border-hover);
+      border-top-color: var(--text-primary);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .haiku-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+    }
+
+    .haiku-line {
+      font-family: 'Playfair Display', serif;
+      font-size: 21px;
+      font-weight: 400;
+      color: var(--text-primary);
+      line-height: 1.45;
+      opacity: 0;
+      transform: translateY(7px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+
+    .haiku-line.visible { opacity: 1; transform: translateY(0); }
+    .haiku-line:nth-child(2) { transition-delay: 0.15s; }
+    .haiku-line:nth-child(3) { transition-delay: 0.3s; }
+
+    .haiku-divider {
+      width: 30px;
+      height: 0.5px;
+      background: var(--border-hover);
+      margin: 1.2rem auto 0.8rem;
+      opacity: 0;
+      transition: opacity 0.4s 0.5s;
+    }
+
+    .haiku-divider.visible { opacity: 1; }
+
+    .haiku-topic-label {
+      font-size: 10px;
+      font-weight: 300;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      opacity: 0;
+      transition: opacity 0.4s 0.65s;
+    }
+
+    .haiku-topic-label.visible { opacity: 1; }
+
+    .error-msg {
+      font-size: 13px;
+      font-weight: 300;
+      color: #c0392b;
+    }
+
+    /* Syllable hint */
+    .syllable-hint {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .syl {
+      font-size: 10px;
+      font-weight: 300;
+      letter-spacing: 0.08em;
+      color: var(--text-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <div class="header">
+      <p class="eyebrow">AI · Poetry</p>
+      <h1>Haiku Generator</h1>
+      <p class="tagline">turn any topic into a three-line poem, one breath at a time</p>
+    </div>
+
+    <div class="input-row">
+      <input
+        class="topic-input"
+        id="topicInput"
+        type="text"
+        placeholder="enter a topic — autumn, solitude, the ocean..."
+        maxlength="80"
+        autocomplete="off"
+      />
+      <button class="gen-btn" id="genBtn">Write</button>
+    </div>
+
+    <div class="haiku-card" id="haikuCard">
+      <p class="empty-state" id="emptyState">your haiku will appear here</p>
+      <div class="spinner" id="spinner" style="display:none;"></div>
+      <div class="haiku-lines" id="haikuLines" style="display:none;"></div>
+      <div class="haiku-divider" id="divider"></div>
+      <p class="haiku-topic-label" id="topicLabel"></p>
+      <p class="error-msg" id="errorMsg" style="display:none;"></p>
+    </div>
+
+    <div class="syllable-hint">
+      <span class="syl">5 syllables</span>
+      <span class="syl">·</span>
+      <span class="syl">7 syllables</span>
+      <span class="syl">·</span>
+      <span class="syl">5 syllables</span>
+    </div>
+
+  </div>
+
+  <script>
+    const btn       = document.getElementById('genBtn');
+    const input     = document.getElementById('topicInput');
+    const card      = document.getElementById('haikuCard');
+    const emptyState = document.getElementById('emptyState');
+    const spinner   = document.getElementById('spinner');
+    const haikuLines = document.getElementById('haikuLines');
+    const divider   = document.getElementById('divider');
+    const topicLabel = document.getElementById('topicLabel');
+    const errorMsg  = document.getElementById('errorMsg');
+
+    async function generateHaiku() {
+      const topic = input.value.trim();
+      if (!topic) { input.focus(); return; }
+
+      btn.disabled = true;
+      card.classList.add('loading');
+      emptyState.style.display = 'none';
+      haikuLines.style.display = 'none';
+      haikuLines.innerHTML = '';
+      divider.classList.remove('visible');
+      topicLabel.classList.remove('visible');
+      errorMsg.style.display = 'none';
+      spinner.style.display = 'block';
+
+      try {
+        const res = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Server error');
+
+        const lines = data.haiku;
+
+        spinner.style.display = 'none';
+        card.classList.remove('loading');
+
+        haikuLines.style.display = 'flex';
+        lines.forEach((line, i) => {
+          const el = document.createElement('p');
+          el.className = 'haiku-line';
+          el.textContent = line;
+          haikuLines.appendChild(el);
+          setTimeout(() => el.classList.add('visible'), 50 + i * 10);
+        });
+
+        topicLabel.textContent = topic;
+        setTimeout(() => {
+          divider.classList.add('visible');
+          topicLabel.classList.add('visible');
+        }, 100);
+
+      } catch (err) {
+        spinner.style.display = 'none';
+        card.classList.remove('loading');
+        errorMsg.textContent = err.message || 'Something went wrong. Please try again.';
+        errorMsg.style.display = 'block';
+      }
+
+      btn.disabled = false;
+    }
+
+    btn.addEventListener('click', generateHaiku);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') generateHaiku(); });
+  </script>
+</body>
+</html>
